@@ -49,12 +49,7 @@ class Worker extends Channel {
       SinkWriter sinkWriter,
       SinkTaskContext context) {
     // pass transient consumer group ID to which we never commit offsets
-    super(
-        "worker",
-        config.controlGroupIdPrefix() + UUID.randomUUID(),
-        config,
-        clientFactory,
-        context);
+    super("worker", config.controlGroupIdPrefix() + UUID.randomUUID(), config, clientFactory);
 
     this.config = config;
     this.context = context;
@@ -62,7 +57,7 @@ class Worker extends Channel {
   }
 
   void process() {
-    consumeAvailable(Duration.ZERO);
+    consumeAvailable(Duration.ofSeconds(1));
   }
 
   @Override

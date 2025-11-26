@@ -23,13 +23,12 @@ import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.connect.Committer;
+import org.apache.iceberg.connect.DataFabricUtil;
 import org.apache.iceberg.connect.IcebergSinkConfig;
 import org.apache.iceberg.connect.data.SinkWriter;
 import org.apache.iceberg.relocated.com.google.common.annotations.VisibleForTesting;
-import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.clients.admin.ConsumerGroupDescription;
+import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.apache.kafka.clients.admin.MemberDescription;
-import org.apache.kafka.common.ConsumerGroupState;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -47,7 +46,8 @@ public class CommitterImpl implements Committer {
   private IcebergSinkConfig config;
   private SinkTaskContext context;
   private KafkaClientFactory clientFactory;
-  private Collection<MemberDescription> membersWhenWorkerIsCoordinator;
+  private final Collection<String> allUsedStreams = Sets.newHashSet();
+  private int totalPartitionCount;
   private final AtomicBoolean isInitialized = new AtomicBoolean(false);
 
   private void initialize(
@@ -75,18 +75,24 @@ public class CommitterImpl implements Committer {
   }
 
   private boolean hasLeaderPartition(Collection<TopicPartition> currentAssignedPartitions) {
-    ConsumerGroupDescription groupDesc;
-    try (Admin admin = clientFactory.createAdmin()) {
-      groupDesc = KafkaUtils.consumerGroupDescription(config.connectGroupId(), admin);
-    }
-    if (groupDesc.state() == ConsumerGroupState.STABLE) {
-      Collection<MemberDescription> members = groupDesc.members();
-      if (containsFirstPartition(members, currentAssignedPartitions)) {
-        membersWhenWorkerIsCoordinator = members;
-        return true;
-      }
+    allUsedStreams.addAll(DataFabricUtil.partitions2Streams(currentAssignedPartitions));
+    Collection<TopicPartition> realPartitions =
+        DataFabricUtil.getGroupAssignments(allUsedStreams, config.connectGroupId());
+    if (containsFirstPartitionDF(realPartitions, currentAssignedPartitions)) {
+      totalPartitionCount = realPartitions.size();
+      return true;
     }
     return false;
+  }
+
+  boolean containsFirstPartitionDF(
+      Collection<TopicPartition> currentPartitions, Collection<TopicPartition> expectedPartitions) {
+    TopicPartition firstTopicPartition =
+        currentPartitions.stream()
+            .min(new TopicPartitionComparator())
+            .orElseThrow(
+                () -> new ConnectException("No partitions assigned, cannot determine leader"));
+    return expectedPartitions.contains(firstTopicPartition);
   }
 
   @VisibleForTesting
@@ -187,7 +193,7 @@ public class CommitterImpl implements Committer {
     if (null == this.coordinatorThread) {
       LOG.info("Task elected leader, starting commit coordinator");
       Coordinator coordinator =
-          new Coordinator(catalog, config, membersWhenWorkerIsCoordinator, clientFactory, context);
+          new Coordinator(catalog, config, totalPartitionCount, clientFactory, context);
       coordinatorThread = new CoordinatorThread(coordinator);
       coordinatorThread.start();
     }

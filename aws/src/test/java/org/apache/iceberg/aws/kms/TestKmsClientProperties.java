@@ -33,8 +33,8 @@ public class TestKmsClientProperties {
 
     KmsClientBuilder builder = KmsClient.builder();
     awsClientProperties.applyRetryConfigurations(builder);
-    RetryMode retryPolicy = builder.overrideConfiguration().retryMode().get();
+    RetryMode retryPolicy = builder.overrideConfiguration().retryPolicy().get().retryMode();
 
-    assertThat(retryPolicy).as("retry mode should be ADAPTIVE_V2").isEqualTo(RetryMode.ADAPTIVE_V2);
+    assertThat(retryPolicy).as("retry mode should be ADAPTIVE").isEqualTo(RetryMode.ADAPTIVE);
   }
 }

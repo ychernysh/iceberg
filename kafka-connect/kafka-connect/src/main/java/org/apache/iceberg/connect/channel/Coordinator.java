@@ -82,13 +82,26 @@ class Coordinator extends Channel {
       Collection<MemberDescription> members,
       KafkaClientFactory clientFactory,
       SinkTaskContext context) {
+    this(
+        catalog,
+        config,
+        members.stream().mapToInt(desc -> desc.assignment().topicPartitions().size()).sum(),
+        clientFactory,
+        context);
+  }
+
+  Coordinator(
+      Catalog catalog,
+      IcebergSinkConfig config,
+      int totalPartitionCount,
+      KafkaClientFactory clientFactory,
+      SinkTaskContext context) {
     // pass consumer group ID to which we commit low watermark offsets
-    super("coordinator", config.connectGroupId() + "-coord", config, clientFactory, context);
+    super("coordinator", config.connectGroupId() + "-coord", config, clientFactory);
 
     this.catalog = catalog;
     this.config = config;
-    this.totalPartitionCount =
-        members.stream().mapToInt(desc -> desc.assignment().topicPartitions().size()).sum();
+    this.totalPartitionCount = totalPartitionCount;
     this.snapshotOffsetsProp =
         String.format(
             "kafka.connect.offsets.%s.%s", config.controlTopic(), config.connectGroupId());

@@ -144,8 +144,8 @@ public class TestS3RestSigner {
       httpServer.stop();
     }
 
-    IoUtils.closeQuietlyV2(S3V4RestSignerClient.authManager, null);
-    IoUtils.closeQuietlyV2(S3V4RestSignerClient.httpClient, null);
+    IoUtils.closeQuietly(S3V4RestSignerClient.authManager, null);
+    IoUtils.closeQuietly(S3V4RestSignerClient.httpClient, null);
     S3V4RestSignerClient.authManager = null;
     S3V4RestSignerClient.httpClient = null;
   }

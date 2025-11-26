@@ -38,7 +38,6 @@ import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
 
 public class AwsClientProperties implements Serializable {
@@ -253,7 +252,7 @@ public class AwsClientProperties implements Serializable {
             ? builder.overrideConfiguration().toBuilder()
             : ClientOverrideConfiguration.builder();
 
-    builder.overrideConfiguration(configBuilder.retryStrategy(RetryMode.ADAPTIVE_V2).build());
+    builder.overrideConfiguration(configBuilder.retryPolicy(RetryMode.ADAPTIVE).build());
   }
 
   /**
@@ -268,7 +267,8 @@ public class AwsClientProperties implements Serializable {
   public <BuilderT extends AwsClientBuilder<BuilderT, ClientT>, ClientT> void applyLegacyMd5Plugin(
       BuilderT builder) {
     if (legacyMd5pluginEnabled) {
-      builder.addPlugin(LegacyMd5Plugin.create());
+      throw new IllegalStateException(
+          "Can not add LegacyMd5Plugin because of downgrade to AWS SDK 2.25.0");
     }
   }
 

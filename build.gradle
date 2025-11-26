@@ -120,6 +120,10 @@ allprojects {
   repositories {
     mavenCentral()
     mavenLocal()
+    maven {
+      url System.getenv('MAPR_MAVEN_REPO')
+      allowInsecureProtocol = true
+    }
   }
 }
 

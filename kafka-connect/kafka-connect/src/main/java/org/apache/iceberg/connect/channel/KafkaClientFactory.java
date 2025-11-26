@@ -43,10 +43,8 @@ class KafkaClientFactory {
   Producer<String, byte[]> createProducer(String transactionalId) {
     Map<String, Object> producerProps = Maps.newHashMap(kafkaProps);
     producerProps.putIfAbsent(ProducerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
-    producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, transactionalId);
     KafkaProducer<String, byte[]> result =
         new KafkaProducer<>(producerProps, new StringSerializer(), new ByteArraySerializer());
-    result.initTransactions();
     return result;
   }
 
@@ -55,7 +53,6 @@ class KafkaClientFactory {
     consumerProps.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
     consumerProps.putIfAbsent(ConsumerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
     consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-    consumerProps.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
     consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId);
     return new KafkaConsumer<>(
         consumerProps, new StringDeserializer(), new ByteArrayDeserializer());

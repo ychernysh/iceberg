@@ -91,7 +91,7 @@ class TestS3V4RestSignerClient {
 
   @AfterEach
   void afterEach() {
-    IoUtils.closeQuietlyV2(S3V4RestSignerClient.authManager, null);
+    IoUtils.closeQuietly(S3V4RestSignerClient.authManager, null);
     S3V4RestSignerClient.authManager = null;
   }
 

@@ -53,7 +53,11 @@ public class TestMinioUtil {
     for (int i = 0; i < 5; i++) {
       String payload = "test-payload-" + i;
       PutObjectRequest request =
-          PutObjectRequest.builder().bucket(bucket).key(key).ifNoneMatch("*").build();
+          PutObjectRequest.builder()
+              .bucket(bucket)
+              .key(key)
+              .overrideConfiguration(c -> c.putHeader("If-None-Match", "*"))
+              .build();
       RequestBody body = RequestBody.fromString(payload);
       if (i == 0) {
         PutObjectResponse response = s3Client.putObject(request, body);

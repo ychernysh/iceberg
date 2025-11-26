@@ -37,7 +37,6 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.connect.sink.SinkTaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +48,6 @@ abstract class Channel {
   private final String connectGroupId;
   private final Producer<String, byte[]> producer;
   private final Consumer<String, byte[]> consumer;
-  private final SinkTaskContext context;
   private final Admin admin;
   private final Map<Integer, Long> controlTopicOffsets = Maps.newHashMap();
   private final String producerId;
@@ -58,11 +56,9 @@ abstract class Channel {
       String name,
       String consumerGroupId,
       IcebergSinkConfig config,
-      KafkaClientFactory clientFactory,
-      SinkTaskContext context) {
+      KafkaClientFactory clientFactory) {
     this.controlTopic = config.controlTopic();
     this.connectGroupId = config.connectGroupId();
-    this.context = context;
 
     String transactionalId = config.transactionalPrefix() + name + config.transactionalSuffix();
     this.producer = clientFactory.createProducer(transactionalId);
@@ -92,26 +88,8 @@ abstract class Channel {
                 })
             .collect(Collectors.toList());
 
-    synchronized (producer) {
-      producer.beginTransaction();
-      try {
-        // NOTE: we shouldn't call get() on the future in a transactional context,
-        // see docs for org.apache.kafka.clients.producer.KafkaProducer
-        recordList.forEach(producer::send);
-        if (!sourceOffsets.isEmpty()) {
-          producer.sendOffsetsToTransaction(
-              offsetsToCommit, KafkaUtils.consumerGroupMetadata(context));
-        }
-        producer.commitTransaction();
-      } catch (Exception e) {
-        try {
-          producer.abortTransaction();
-        } catch (Exception ex) {
-          LOG.warn("Error aborting producer transaction", ex);
-        }
-        throw e;
-      }
-    }
+    recordList.forEach(producer::send);
+    producer.flush();
   }
 
   protected abstract boolean receive(Envelope envelope);

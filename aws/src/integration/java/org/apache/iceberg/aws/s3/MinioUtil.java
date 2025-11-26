@@ -25,7 +25,6 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
@@ -63,7 +62,8 @@ public class MinioUtil {
     URI uri = URI.create(container.getS3URL());
     S3ClientBuilder builder = S3Client.builder();
     if (legacyMd5PluginEnabled) {
-      builder.addPlugin(LegacyMd5Plugin.create());
+      throw new IllegalStateException(
+          "Can not add LegacyMd5Plugin because of downgrade to AWS SDK 2.25.0");
     }
     builder.credentialsProvider(
         StaticCredentialsProvider.create(
